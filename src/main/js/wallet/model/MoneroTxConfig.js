@@ -1,8 +1,7 @@
-const assert = require("assert");
-const BigInteger = require("../../common/biginteger").BigInteger;
-const GenUtils = require("../../common/GenUtils");
-const MoneroDestination = require("./MoneroDestination");
-const MoneroError = require("../../common/MoneroError");
+import assert from "assert";
+import GenUtils from "../../common/GenUtils";
+import MoneroDestination from "./MoneroDestination";
+import MoneroError from "../../common/MoneroError";
 
 /**
  * Configures a transaction to send, sweep, or create a payment URI.
@@ -18,28 +17,28 @@ class MoneroTxConfig {
    * let config1 = new MoneroTxConfig({<br>
    * &nbsp;&nbsp; accountIndex: 0,<br>
    * &nbsp;&nbsp; address: "59aZULsUF3YN...",<br>
-   * &nbsp;&nbsp; amount: new BigInteger("500000"),<br>
+   * &nbsp;&nbsp; amount: BigInt("500000"),<br>
    * &nbsp;&nbsp; priority: MoneroTxPriority.NORMAL,<br>
    * &nbsp;&nbsp; relay: true<br>
    * });<br><br>
    * </code>
    * 
-   * @param {MoneroTxConfig|object} config - configures the transaction to create (optional)
+   * @param {MoneroTxConfig|object} [config] - configures the transaction to create (optional)
    * @param {string} config.address - single destination address
-   * @param {BigInteger} config.amount - single destination amount
-   * @param {int} config.accountIndex - source account index to transfer funds from
-   * @param {int} config.subaddressIndex - source subaddress index to transfer funds from
+   * @param {BigInt} config.amount - single destination amount
+   * @param {number} config.accountIndex - source account index to transfer funds from
+   * @param {number} config.subaddressIndex - source subaddress index to transfer funds from
    * @param {int[]} config.subaddressIndices - source subaddress indices to transfer funds from
    * @param {boolean} config.relay - relay the transaction to peers to commit to the blockchain
-   * @param {MoneroTxPriority} config.priority - transaction priority (default MoneroTxPriority.NORMAL)
+   * @param {MoneroTxPriority} [config.priority] - transaction priority (default MoneroTxPriority.NORMAL)
    * @param {MoneroDestination[]} config.destinations - addresses and amounts in a multi-destination tx
    * @param {int[]} config.subtractFeeFrom - list of destination indices to split the transaction fee
    * @param {string} config.paymentId - transaction payment ID
-   * @param {BigInteger} config.unlockTime - minimum height or timestamp for the transaction to unlock (default 0)
+   * @param {BigInt} [config.unlockTime] - minimum height or timestamp for the transaction to unlock (default 0)
    * @param {string} config.note - transaction note saved locally with the wallet
    * @param {string} config.recipientName - recipient name saved locally with the wallet
    * @param {boolean} config.canSplit - allow funds to be transferred using multiple transactions
-   * @param {BigInteger} config.belowAmount - for sweep requests, include outputs below this amount when sweeping wallet, account, subaddress, or all unlocked funds 
+   * @param {BigInt} config.belowAmount - for sweep requests, include outputs below this amount when sweeping wallet, account, subaddress, or all unlocked funds 
    * @param {boolean} config.sweepEachSubaddress - for sweep requests, sweep each subaddress individually instead of together if true
    * @param {string} config.keyImage - key image to sweep (ignored except in sweepOutput() requests)
    */
@@ -52,9 +51,9 @@ class MoneroTxConfig {
     else if (typeof config === "object") {
       this.state = Object.assign({}, config);
       if (relaxValidation) {
-        if (typeof this.state.amount === "number") this.state.amount = BigInteger.parse(this.state.amount);
-        if (typeof this.state.unlockTime === "number") this.state.unlockTime = BigInteger.parse(this.state.unlockTime);
-        if (typeof this.state.belowAmount === "number") this.state.belowAmount = BigInteger.parse(this.state.belowAmount);
+        if (typeof this.state.amount === "number") this.state.amount = BigInt(this.state.amount);
+        if (typeof this.state.unlockTime === "number") this.state.unlockTime = BigInt(this.state.unlockTime);
+        if (typeof this.state.belowAmount === "number") this.state.belowAmount = BigInt(this.state.belowAmount);
       }
 
       // check for unsupported fields
@@ -99,7 +98,7 @@ class MoneroTxConfig {
   
   toJson() {
     let json = Object.assign({}, this.state); // copy state
-    if (this.getDestinations()) {
+    if (this.getDestinations() !== undefined) {
       json.destinations = [];
       for (let destination of this.getDestinations()) json.destinations.push(destination.toJson());
     }
@@ -135,13 +134,13 @@ class MoneroTxConfig {
   /**
    * Set the amount of a single-destination configuration.
    * 
-   * @param {BigInteger|string} amount - the amount to set for the single destination
+   * @param {BigInt|string} amount - the amount to set for the single destination
    * @return {MoneroTxConfig} this configuration for chaining
    */
   setAmount(amount) {
-    if (amount !== undefined && !(this.state.amount instanceof BigInteger)) {
-      if (typeof amount === "number") throw new MoneroError("Destination amount must be BigInteger or string");
-      try { amount = BigInteger.parse(amount); }
+    if (amount !== undefined && !(this.state.amount instanceof BigInt)) {
+      if (typeof amount === "number") throw new MoneroError("Destination amount must be BigInt or string");
+      try { amount = BigInt(amount); }
       catch (err) { throw new MoneroError("Invalid destination amount: " + amount); }
     }
     if (this.state.destinations !== undefined && this.state.destinations.length > 1) throw new MoneroError("Cannot set amount because MoneroTxConfig already has multiple destinations");
@@ -153,7 +152,7 @@ class MoneroTxConfig {
   /**
    * Get the amount of a single-destination configuration.
    * 
-   * @return {BigInteger} the amount of the single destination
+   * @return {BigInt} the amount of the single destination
    */
   getAmount() {
     if (this.state.destinations === undefined || this.state.destinations.length !== 1) throw new MoneroError("Cannot get amount because MoneroTxConfig does not have exactly one destination");
@@ -337,4 +336,4 @@ class MoneroTxConfig {
 
 MoneroTxConfig.SUPPORTED_FIELDS = ["address", "amount", "accountIndex", "subaddressIndex", "subaddressIndices", "relay", "priority", "destinations", "subtractFeeFrom", "paymentId", "unlockTime", "note", "recipientName", "canSplit", "belowAmount", "sweepEachSubaddress", "keyImage"];
 
-module.exports = MoneroTxConfig
+export default MoneroTxConfig;

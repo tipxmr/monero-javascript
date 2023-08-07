@@ -1,5 +1,4 @@
-const BigInteger = require("../../common/biginteger").BigInteger;
-const GenUtils = require("../../common/GenUtils");
+import GenUtils from "../../common/GenUtils";
 
 /**
  * Models a Monero fee estimate.
@@ -76,4 +75,4 @@ class MoneroFeeEstimate {
   }
 }
 
-module.exports = MoneroFeeEstimate;
+export default MoneroFeeEstimate;

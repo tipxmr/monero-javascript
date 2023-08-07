@@ -1,13 +1,16 @@
-const assert = require("assert");
-const WalletSyncPrinter = require("./WalletSyncPrinter");
-const monerojs = require("../../../index");
-const LibraryUtils = monerojs.LibraryUtils;
-const GenUtils = monerojs.GenUtils;
-const MoneroRpcError = monerojs.MoneroRpcError;
-const MoneroRpcConnection = monerojs.MoneroRpcConnection;
-const BigInteger = monerojs.BigInteger;
-const MoneroNetworkType = monerojs.MoneroNetworkType;
-const MoneroWalletRpc = monerojs.MoneroWalletRpc;
+import assert from "assert";
+import WalletSyncPrinter from "./WalletSyncPrinter";
+import {LibraryUtils,
+        GenUtils,
+        MoneroRpcError,
+        MoneroRpcConnection,
+        MoneroNetworkType,
+        MoneroWalletRpc,
+        connectToWalletRpc,
+        connectToDaemonRpc,
+        openWalletFull,
+        createWalletFull,
+        MoneroWalletFull} from "../../../index";
 
 /**
  * Collection of test utilities and configurations.
@@ -32,7 +35,7 @@ class TestUtils {
    * @return {MoneroDaemonRpc} a daemon RPC instance
    */
   static async getDaemonRpc() {
-    if (TestUtils.daemonRpc === undefined) TestUtils.daemonRpc = await monerojs.connectToDaemonRpc(Object.assign({proxyToWorker: TestUtils.PROXY_TO_WORKER}, TestUtils.DAEMON_RPC_CONFIG));
+    if (TestUtils.daemonRpc === undefined) TestUtils.daemonRpc = await connectToDaemonRpc(Object.assign({proxyToWorker: TestUtils.PROXY_TO_WORKER}, TestUtils.DAEMON_RPC_CONFIG));
     return TestUtils.daemonRpc;
   }
   
@@ -52,7 +55,7 @@ class TestUtils {
     if (TestUtils.walletRpc === undefined) {
       
       // construct wallet rpc instance with daemon connection
-      TestUtils.walletRpc = await monerojs.connectToWalletRpc(TestUtils.WALLET_RPC_CONFIG);
+      TestUtils.walletRpc = await connectToWalletRpc(TestUtils.WALLET_RPC_CONFIG);
     }
     
     // attempt to open test wallet
@@ -103,7 +106,7 @@ class TestUtils {
     let wallet;
     if (GenUtils.isBrowser()) {
       let uri = TestUtils.WALLET_RPC_CONFIG.uri.substring(0, TestUtils.WALLET_RPC_CONFIG.uri.lastIndexOf(":")) + ":" + (TestUtils.WALLET_RPC_PORT_START + portOffset);
-      wallet = await monerojs.connectToWalletRpc(uri, TestUtils.WALLET_RPC_CONFIG.username, TestUtils.WALLET_RPC_CONFIG.password);
+      wallet = await connectToWalletRpc(uri, TestUtils.WALLET_RPC_CONFIG.username, TestUtils.WALLET_RPC_CONFIG.password);
     } else {
         
       // create command to start client with internal monero-wallet-rpc process
@@ -122,7 +125,7 @@ class TestUtils {
       // TODO: include zmq params when supported and enabled
       
       // create and connect to monero-wallet-rpc process
-      wallet = await monerojs.connectToWalletRpc(cmd);
+      wallet = await connectToWalletRpc(cmd);
     }
     
     // register wallet with port offset
@@ -163,8 +166,7 @@ class TestUtils {
       
       // create wallet from seed phrase if it doesn't exist
       let fs = TestUtils.getDefaultFs();
-      if (!await monerojs.MoneroWalletFull.walletExists(TestUtils.WALLET_FULL_PATH, fs)) {
-        
+      if (!await MoneroWalletFull.walletExists(TestUtils.WALLET_FULL_PATH, fs)) {
         // create directory for test wallets if it doesn't exist
         if (!fs.existsSync(TestUtils.TEST_WALLETS_DIR)) {
           if (!fs.existsSync(process.cwd())) fs.mkdirSync(process.cwd(), { recursive: true });  // create current process directory for relative paths which does not exist in memory fs
@@ -181,7 +183,7 @@ class TestUtils {
       
       // otherwise open existing wallet
       else {
-        TestUtils.walletFull = await monerojs.openWalletFull({path: TestUtils.WALLET_FULL_PATH, password: TestUtils.WALLET_PASSWORD, networkType: TestUtils.NETWORK_TYPE, server: TestUtils.getDaemonRpcConnection(), proxyToWorker: TestUtils.PROXY_TO_WORKER, fs: TestUtils.getDefaultFs()});
+        TestUtils.walletFull = await openWalletFull({path: TestUtils.WALLET_FULL_PATH, password: TestUtils.WALLET_PASSWORD, networkType: TestUtils.NETWORK_TYPE, server: TestUtils.getDaemonRpcConnection(), proxyToWorker: TestUtils.PROXY_TO_WORKER, fs: TestUtils.getDefaultFs()});
         await TestUtils.walletFull.sync(new WalletSyncPrinter());
         await TestUtils.walletFull.startSyncing(TestUtils.SYNC_PERIOD_IN_MS);
       }
@@ -243,17 +245,17 @@ class TestUtils {
     return gtWallet;
   }
   
-  static testUnsignedBigInteger(num, nonZero) {
+  static testUnsignedBigInt(num, nonZero) {
     assert(num);
-    assert(num instanceof BigInteger);
-    let comparison = num.compare(new BigInteger(0));
+    assert(num instanceof BigInt);
+    let comparison = GenUtils.compareBigInt(num, BigInt(0));
     assert(comparison >= 0);
     if (nonZero === true) assert(comparison > 0);
     if (nonZero === false) assert(comparison === 0);
   }
   
   static async getExternalWalletAddress() {
-    let wallet = await monerojs.createWalletKeys({networkType: TestUtils.NETWORK_TYPE});
+    let wallet = await createWalletKeys({networkType: TestUtils.NETWORK_TYPE});
     return await wallet.getAddress(0, 1); // subaddress
   }
   
@@ -277,7 +279,7 @@ class TestUtils {
 // TODO: export these to key/value properties file for tests
 
 // directory with monero binaries to test (monerod and monero-wallet-rpc)
-TestUtils.MONERO_BINS_DIR = "/path/to/bins";
+TestUtils.MONERO_BINS_DIR = "~/git/haveno/.localnet";
 
 // test wallet config
 TestUtils.WALLET_NAME = "test_wallet_1";
@@ -285,7 +287,7 @@ TestUtils.WALLET_PASSWORD = "supersecretpassword123";
 TestUtils.TEST_WALLETS_DIR = "./test_wallets";
 TestUtils.WALLET_FULL_PATH = TestUtils.TEST_WALLETS_DIR + "/" + TestUtils.WALLET_NAME;
 
-TestUtils.MAX_FEE = new BigInteger("7500000").multiply(new BigInteger("10000"));
+TestUtils.MAX_FEE = BigInt("7500000") * BigInt("10000");
 TestUtils.NETWORK_TYPE = MoneroNetworkType.TESTNET;
 
 // default keypair to test
@@ -305,12 +307,10 @@ TestUtils.WALLET_RPC_CONFIG = {
 TestUtils.DAEMON_LOCAL_PATH = TestUtils.MONERO_BINS_DIR + "/monerod";
 TestUtils.DAEMON_RPC_CONFIG = {
   uri: "localhost:28081",
-  username: undefined,
-  password: undefined,
   rejectUnauthorized: true // reject self-signed certificates if true
 };
 
-const WalletTxTracker = require("./WalletTxTracker");
+import WalletTxTracker from "./WalletTxTracker";
 TestUtils.WALLET_TX_TRACKER = new WalletTxTracker(); // used to track wallet txs for tests
 TestUtils.PROXY_TO_WORKER = true;
 TestUtils.SYNC_PERIOD_IN_MS = 5000; // period between wallet syncs in milliseconds
@@ -323,4 +323,4 @@ TestUtils.WALLET_RPC_LOCAL_PATH = TestUtils.MONERO_BINS_DIR + "/monero-wallet-rp
 TestUtils.WALLET_RPC_LOCAL_WALLET_DIR = TestUtils.MONERO_BINS_DIR;
 TestUtils.WALLET_RPC_ACCESS_CONTROL_ORIGINS = "http://localhost:8080"; // cors access from web browser
 
-module.exports = TestUtils;
+export default TestUtils;

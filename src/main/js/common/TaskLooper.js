@@ -24,7 +24,7 @@ class TaskLooper {
   /**
    * Start the task loop.
    * 
-   * @param {int} periodInMs the loop period in milliseconds
+   * @param {number} periodInMs the loop period in milliseconds
    * @return {TaskLooper} this class for chaining
    */
   start(periodInMs) {
@@ -75,4 +75,4 @@ class TaskLooper {
   }
 }
 
-module.exports = TaskLooper;
+export default TaskLooper;
